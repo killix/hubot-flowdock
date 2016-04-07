@@ -29,11 +29,16 @@ class Flowdock extends Adapter
     flow = metadata.room || envelope.room
     thread_id = metadata.thread_id
     message_id = metadata.message_id
+    is_edit = metadata.is_edit
+
     user = envelope.user
     forceNewMessage = envelope.newMessage == true
     sendRest = ->
       self.send(envelope, strings...)
-    if user?
+
+    if is_edit
+      @bot.editMessage flow, @bot.organization.parameterized_name, message_id, {content: str}, sendRest
+    else if user?
       if flow?
         if thread_id and not forceNewMessage
           # respond to a thread
@@ -170,6 +175,12 @@ class Flowdock extends Adapter
     @bot.on "error", (e) =>
       @robot.logger.error("Unexpected error in Flowdock client: #{e}")
       @emit e
+
+    @bot.get "/organizations", null, (err, organizations, res) =>
+      # we take only the first organization
+      if !err && res.statusCode == 200
+        @bot.organization = organizations[0]
+        return
 
     @fetchFlowsAndConnect()
 
